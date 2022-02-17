@@ -16,9 +16,12 @@ def home():
 @app.route('/posts/<page>')
 def post_page(page):
     post = {}
+    print(page)
     for i in posts:
-        if i['id'] == page:
+        if i['id'] == int(page):
             post = i
+            break
+    print(post)
     return render_template("post.html", post=post)
 
 
