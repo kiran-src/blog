@@ -31,9 +31,7 @@ def post_page(page):
             post = i
             break
     print(post)
-    dt = datetime.now()
-    date = f"{dt.day} {dt.strftime('%B')} {dt.year}"
-    return render_template("post.html", post=post, date=date)
+    return render_template("post.html", post=post)
 
 
 if __name__ == "__main__":
