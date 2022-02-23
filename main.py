@@ -12,6 +12,14 @@ posts = api.json()
 def home():
     return render_template("index.html", posts=posts)
 
+@app.route('/contact')
+def contact():
+    return render_template("contact.html", posts=posts)
+
+@app.route('/about')
+def about():
+    return render_template("about.html", posts=posts)
+
 
 @app.route('/posts/<page>')
 def post_page(page):
