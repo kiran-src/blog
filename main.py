@@ -1,9 +1,10 @@
 from flask import Flask, render_template
 import requests
+from datetime import datetime
 
 app = Flask(__name__)
 
-api = requests.get(url="https://api.npoint.io/c790b4d5cab58020d391")
+api = requests.get(url="https://api.npoint.io/6c3754b7be2b015f9e72")
 api.raise_for_status()
 posts = api.json()
 
@@ -30,7 +31,9 @@ def post_page(page):
             post = i
             break
     print(post)
-    return render_template("post.html", post=post)
+    dt = datetime.now()
+    date = f"{dt.day} {dt.strftime('%B')} {dt.year}"
+    return render_template("post.html", post=post, date=date)
 
 
 if __name__ == "__main__":
