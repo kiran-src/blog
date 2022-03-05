@@ -1,9 +1,10 @@
 {% extends 'bootstrap/base.html' %}
 {% block title %}Make a new Post{% endblock %}
 {% include "header.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
 {% block content %}
 {% include "navigation.html" %}
-
+{{ ckeditor.load() }}
   <!-- Page Header -->
   <header class="masthead" style="background-image: url('{{ url_for('static', filename='img/edit-bg.jpg')}}')">
     <div class="overlay"></div>
@@ -13,6 +14,7 @@
           <div class="page-heading">
             <h1>New Post</h1>
             <span class="subheading">You're going to make a great blog post!</span>
+            {{ wtf.quick_form(form) }}
           </div>
         </div>
       </div>

@@ -11247,3 +11247,8 @@ header.masthead .site-heading .h1 {
     font-size: 2.25rem;
   }
 }
+
+.form-group{
+    text-align: left;
+    font-size: 2rem;
+}
