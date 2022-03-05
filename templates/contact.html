@@ -1,8 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'bootstrap/base.html' %}
+{% block title %}Contact Me{% endblock %}
 {% include "header.html" %}
-    <body>
-        {% include "navigation.html" %}
+{% block content %}
+{% include "navigation.html" %}
+
         <!-- Page Header-->
         <header class="masthead" style="background-image: url({{url_for('static', filename='assets/img/contact-bg.jpg')}})">
             <div class="container position-relative px-4 px-lg-5">
@@ -78,6 +79,5 @@
                 </div>
             </div>
         </main>
-        {% include "footer.html" %}
-    </body>
-</html>
+{% include "footer.html" %}
+{% endblock %}

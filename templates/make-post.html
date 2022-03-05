@@ -1,7 +1,9 @@
 {% extends 'bootstrap/base.html' %}
-
-{% block content %}
+{% block title %}Make a new Post{% endblock %}
 {% include "header.html" %}
+{% block content %}
+{% include "navigation.html" %}
+
   <!-- Page Header -->
   <header class="masthead" style="background-image: url('{{ url_for('static', filename='img/edit-bg.jpg')}}')">
     <div class="overlay"></div>

@@ -128,7 +128,7 @@ h2, .h2 {
 }
 
 h3, .h3 {
-  font-size: calc(1.3rem + 0.6vw);
+  font-size: calc(1.2rem + 0.6vw);
 }
 @media (min-width: 1200px) {
   h3, .h3 {
@@ -11229,6 +11229,7 @@ header.masthead .site-heading .h1 {
   margin-bottom: 0.625rem;
 }
 .post-preview > a > .post-subtitle {
+  font-size: 1.475rem;
   font-weight: 300;
   margin-bottom: 0.625rem;
 }

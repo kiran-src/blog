@@ -1,10 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Contact Details received</title>
-</head>
-<body>
+{% extends 'bootstrap/base.html' %}
+{% block title %}Contact Details Received{% endblock %}
+{% include "header.html" %}
+{% block content %}
+{% include "navigation.html" %}
+
 <h1>Successfully sent your message</h1>
-</body>
-</html>
+{% include "footer.html" %}
+{% endblock %}

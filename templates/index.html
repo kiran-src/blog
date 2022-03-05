@@ -1,8 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-    {% include "header.html"%}
-    <body>
-        {% include "navigation.html" %}
+{% extends 'bootstrap/base.html' %}
+{% block title %}My Blog{% endblock %}
+{% include "header.html" %}
+{% block content %}
+{% include "navigation.html" %}
 
         <!-- Page Header-->
         <header class="masthead" style="background-image: url({{url_for('static', filename='assets/img/home-bg.jpg')}})">
@@ -37,6 +37,5 @@
                 </div>
             </div>
         </div>
-        {% include "footer.html" %}
-    </body>
-</html>
+{% include "footer.html" %}
+{% endblock %}

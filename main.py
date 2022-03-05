@@ -2,12 +2,14 @@ from flask import Flask, render_template, request, redirect, url_for
 import smtplib
 import os
 from flask_sqlalchemy import SQLAlchemy
+from flask_bootstrap import Bootstrap
 
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+Bootstrap(app)
 
 posts = []
 
@@ -71,6 +73,9 @@ def post_page(page):
             break
     return render_template("post.html", post=post)
 
+@app.route('/new-post')
+def new_post():
+    return render_template("make-post.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
