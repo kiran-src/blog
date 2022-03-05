@@ -1,18 +1,41 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 import requests
 import smtplib
 import os
-from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-api = requests.get(url="https://api.npoint.io/ac95d15dc3289a5388fd")
-api.raise_for_status()
-posts = api.json()
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
+
+class BlogPost(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(250), unique=True, nullable=False)
+    subtitle = db.Column(db.String(250), nullable=False)
+    date = db.Column(db.String(250), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    author = db.Column(db.String(250), nullable=False)
+    img_url = db.Column(db.String(250), nullable=False)
+
+    def to_dict(self):
+        posts = {}
+        for i in self.__table__.columns:
+            posts[i.name] = getattr(self, i.name)
+        return posts
+
+
+def get_posts():
+    posts = []
+    for i in db.session.query(BlogPost).all():
+        posts.append(i.to_dict())
+    return posts
 
 @app.route('/')
 def home():
+    posts = get_posts()
     return render_template("index.html", posts=posts)
 
 @app.route('/about')
@@ -42,7 +65,7 @@ def contact():
 def post_page(page):
     post = {}
     print(page)
-    for i in posts:
+    for i in get_posts():
         if i['id'] == int(page):
             post = i
             break
