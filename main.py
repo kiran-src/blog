@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for
-import requests
 import smtplib
 import os
 from flask_sqlalchemy import SQLAlchemy
@@ -10,6 +9,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+posts = []
 
 class BlogPost(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -27,7 +27,8 @@ class BlogPost(db.Model):
         return posts
 
 
-def get_posts():
+def update_posts():
+    global posts
     posts = []
     for i in db.session.query(BlogPost).all():
         posts.append(i.to_dict())
@@ -35,7 +36,7 @@ def get_posts():
 
 @app.route('/')
 def home():
-    posts = get_posts()
+    update_posts()
     return render_template("index.html", posts=posts)
 
 @app.route('/about')
@@ -64,12 +65,10 @@ def contact():
 @app.route('/posts/<page>')
 def post_page(page):
     post = {}
-    print(page)
-    for i in get_posts():
+    for i in posts:
         if i['id'] == int(page):
             post = i
             break
-    print(post)
     return render_template("post.html", post=post)
 
 
