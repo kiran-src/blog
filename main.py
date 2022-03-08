@@ -1,4 +1,8 @@
 from flask import Flask, render_template, redirect, url_for, flash
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
+from wtforms.validators import DataRequired
+from wtforms.fields.html5 import EmailField
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
@@ -31,7 +35,20 @@ class BlogPost(db.Model):
     date = db.Column(db.String(250), nullable=False)
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
-db.create_all()
+
+
+class Users(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(250), nullable=False)
+    password = db.Column(db.String(500), nullable=False)
+    name = db.Column(db.String(250), nullable=False)
+
+
+class RegisterForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired()])
+    email = EmailField("Email Address", validators=[DataRequired('Valid email address is required')])
+    password = StringField("Password", validators=[DataRequired()])
+    submit = SubmitField("Submit")
 
 
 @app.route('/')
@@ -40,9 +57,22 @@ def get_all_posts():
     return render_template("index.html", all_posts=posts)
 
 
-@app.route('/register')
+@app.route('/register', methods=['POST', 'GET'])
 def register():
-    return render_template("register.html")
+    form = RegisterForm()
+    if form.validate_on_submit():
+        if Users.query.filter_by(email=form.email.data).first() is None:
+            pass
+            # flash("That email has already has an account. Log in instead")
+        else:
+            # new_user = Users(
+            #     email=form.email.data,
+            #     password=generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8),
+            #     name=form.name.data)
+            # db.session.add(new_user)
+            # db.commit()
+            redirect(url_for('home'))
+    return render_template("register.html", form=form)
 
 
 @app.route('/login')
@@ -120,4 +150,4 @@ def delete_post(post_id):
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    app.run(port=5000, debug=True)
