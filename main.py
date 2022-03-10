@@ -1,6 +1,6 @@
 from flask import Flask, render_template, redirect, url_for, flash
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
+from wtforms import StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired
 from wtforms.fields.html5 import EmailField
 from flask_bootstrap import Bootstrap
@@ -18,16 +18,33 @@ app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 ckeditor = CKEditor(app)
 Bootstrap(app)
 
-##CONNECT TO DB
+##CONNECT TO Blog DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+##LOGIN FUNCTIONALITY
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Users.query.get(user_id)
 
 ##CONFIGURE TABLES
 
+
+class Users(UserMixin, db.Model):
+    # __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(250), nullable=False)
+    password = db.Column(db.String(500), nullable=False)
+    name = db.Column(db.String(250), nullable=False)
+    posts = db.relationship('BlogPost', backref='users', lazy=True)
+
+
 class BlogPost(db.Model):
-    __tablename__ = "blog_posts"
+    # __tablename__ = "blog_posts"
     id = db.Column(db.Integer, primary_key=True)
     author = db.Column(db.String(250), nullable=False)
     title = db.Column(db.String(250), unique=True, nullable=False)
@@ -35,73 +52,98 @@ class BlogPost(db.Model):
     date = db.Column(db.String(250), nullable=False)
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
+    person_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
 
-class Users(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(250), nullable=False)
-    password = db.Column(db.String(500), nullable=False)
-    name = db.Column(db.String(250), nullable=False)
-
-
+##FORMS
 class RegisterForm(FlaskForm):
     name = StringField("Name", validators=[DataRequired()])
     email = EmailField("Email Address", validators=[DataRequired('Valid email address is required')])
-    password = StringField("Password", validators=[DataRequired()])
+    password = PasswordField("Password", validators=[DataRequired()])
+    submit = SubmitField("Submit")
+
+
+class LoginForm(FlaskForm):
+    email = EmailField("Email Address", validators=[DataRequired('Valid email address is required')])
+    password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Submit")
 
 
 @app.route('/')
 def get_all_posts():
     posts = BlogPost.query.all()
-    return render_template("index.html", all_posts=posts)
+    return render_template("index.html", all_posts=posts, logged_in=current_user.is_authenticated)
 
 
 @app.route('/register', methods=['POST', 'GET'])
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        if Users.query.filter_by(email=form.email.data).first() is None:
-            pass
-            # flash("That email has already has an account. Log in instead")
+        if current_user.is_authenticated:
+            flash("You are already logged in. Log out to continue")
+        elif Users.query.filter_by(email=form.email.data).first() is None:
+            new_user = Users(
+                email=form.email.data,
+                password=generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8),
+                name=form.name.data)
+            db.session.add(new_user)
+            db.session.commit()
+            login_user(new_user)
+            return redirect(url_for('get_all_posts'))
         else:
-            # new_user = Users(
-            #     email=form.email.data,
-            #     password=generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8),
-            #     name=form.name.data)
-            # db.session.add(new_user)
-            # db.commit()
-            redirect(url_for('home'))
-    return render_template("register.html", form=form)
+            flash("That email has already has an account. Log in instead")
+            return redirect(url_for('login'))
+    return render_template("register.html", form=form, logged_in=current_user.is_authenticated)
 
 
-@app.route('/login')
+@app.route('/login', methods=['POST', 'GET'])
 def login():
-    return render_template("login.html")
+    form = LoginForm()
+    if form.validate_on_submit():
+        print('A')
+        user = Users.query.filter_by(email=form.email.data).first()
+        print('B')
+        if user is None:
+            print('C')
+            flash('That email is not registered. Register first to log in')
+            # return redirect(url_for('login'))
+        elif check_password_hash(user.password, form.password.data):
+            print('D')
+            flash('You were successfully logged in')
+            login_user(user)
+            return redirect(url_for('get_all_posts'))
+        else:
+            print('E')
+            flash('That password is incorrect. Try again')
+            # redirect(url_for('login'))
+    return render_template("login.html", form=form, logged_in=current_user.is_authenticated)
 
 
 @app.route('/logout')
+@login_required
 def logout():
+    logout_user()
     return redirect(url_for('get_all_posts'))
 
 
-@app.route("/post/<int:post_id>")
+@app.route("/post/<int:post_id>", methods=['POST', 'GET'])
 def show_post(post_id):
     requested_post = BlogPost.query.get(post_id)
-    return render_template("post.html", post=requested_post)
+    return render_template("post.html", post=requested_post, logged_in=current_user.is_authenticated)
 
 
 @app.route("/about")
 def about():
-    return render_template("about.html")
+    return render_template("about.html", logged_in=current_user.is_authenticated)
 
 
 @app.route("/contact")
 def contact():
-    return render_template("contact.html")
+    return render_template("contact.html", logged_in=current_user.is_authenticated)
 
 
-@app.route("/new-post")
+@app.route("/new-post", methods=['POST', 'GET'])
+@login_required
 def add_new_post():
     form = CreatePostForm()
     if form.validate_on_submit():
@@ -116,10 +158,11 @@ def add_new_post():
         db.session.add(new_post)
         db.session.commit()
         return redirect(url_for("get_all_posts"))
-    return render_template("make-post.html", form=form)
+    return render_template("make-post.html", form=form, logged_in=current_user.is_authenticated)
 
 
-@app.route("/edit-post/<int:post_id>")
+@app.route("/edit-post/<int:post_id>", methods=['POST', 'GET'])
+@login_required
 def edit_post(post_id):
     post = BlogPost.query.get(post_id)
     edit_form = CreatePostForm(
@@ -138,10 +181,11 @@ def edit_post(post_id):
         db.session.commit()
         return redirect(url_for("show_post", post_id=post.id))
 
-    return render_template("make-post.html", form=edit_form)
+    return render_template("make-post.html", form=edit_form, logged_in=current_user.is_authenticated)
 
 
 @app.route("/delete/<int:post_id>")
+@login_required
 def delete_post(post_id):
     post_to_delete = BlogPost.query.get(post_id)
     db.session.delete(post_to_delete)
