@@ -69,9 +69,20 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
+def admin_only(function):
+    def wrapper():
+
+        if int(current_user.id) == 1:
+            function()
+        else:
+            return render_template("403.html"), 403
+    return wrapper
+
 @app.route('/')
 def get_all_posts():
     posts = BlogPost.query.all()
+    if current_user.is_authenticated:
+        print(current_user.id)
     return render_template("index.html", all_posts=posts, logged_in=current_user.is_authenticated)
 
 
@@ -142,6 +153,7 @@ def contact():
     return render_template("contact.html", logged_in=current_user.is_authenticated)
 
 
+@admin_only
 @app.route("/new-post", methods=['POST', 'GET'])
 @login_required
 def add_new_post():
@@ -161,6 +173,7 @@ def add_new_post():
     return render_template("make-post.html", form=form, logged_in=current_user.is_authenticated)
 
 
+@admin_only
 @app.route("/edit-post/<int:post_id>", methods=['POST', 'GET'])
 @login_required
 def edit_post(post_id):
@@ -184,6 +197,7 @@ def edit_post(post_id):
     return render_template("make-post.html", form=edit_form, logged_in=current_user.is_authenticated)
 
 
+@admin_only
 @app.route("/delete/<int:post_id>")
 @login_required
 def delete_post(post_id):
