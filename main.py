@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash
+from flask import Flask, render_template, redirect, url_for, flash, abort
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired
@@ -69,13 +69,13 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
-def admin_only(function):
+def admin_only(function, check_id):
     def wrapper():
 
         if int(current_user.id) == 1:
             function()
         else:
-            return render_template("403.html"), 403
+            abort(403)
     return wrapper
 
 @app.route('/')
@@ -153,7 +153,6 @@ def contact():
     return render_template("contact.html", logged_in=current_user.is_authenticated)
 
 
-@admin_only
 @app.route("/new-post", methods=['POST', 'GET'])
 @login_required
 def add_new_post():
@@ -164,8 +163,9 @@ def add_new_post():
             subtitle=form.subtitle.data,
             body=form.body.data,
             img_url=form.img_url.data,
-            author=current_user,
-            date=date.today().strftime("%B %d, %Y")
+            author=current_user.name,
+            date=date.today().strftime("%B %d, %Y"),
+            person_id=current_user.id
         )
         db.session.add(new_post)
         db.session.commit()
@@ -173,38 +173,44 @@ def add_new_post():
     return render_template("make-post.html", form=form, logged_in=current_user.is_authenticated)
 
 
-@admin_only
 @app.route("/edit-post/<int:post_id>", methods=['POST', 'GET'])
 @login_required
 def edit_post(post_id):
+
     post = BlogPost.query.get(post_id)
-    edit_form = CreatePostForm(
-        title=post.title,
-        subtitle=post.subtitle,
-        img_url=post.img_url,
-        author=post.author,
-        body=post.body
-    )
-    if edit_form.validate_on_submit():
-        post.title = edit_form.title.data
-        post.subtitle = edit_form.subtitle.data
-        post.img_url = edit_form.img_url.data
-        post.author = edit_form.author.data
-        post.body = edit_form.body.data
-        db.session.commit()
-        return redirect(url_for("show_post", post_id=post.id))
+    if post.person_id == current_user.id or current_user.id == 1:
+        edit_form = CreatePostForm(
+            title=post.title,
+            subtitle=post.subtitle,
+            img_url=post.img_url,
+            author=current_user.name,
+            body=post.body,
+            person_id=current_user.id
+        )
+        if edit_form.validate_on_submit():
+            post.title = edit_form.title.data
+            post.subtitle = edit_form.subtitle.data
+            post.img_url = edit_form.img_url.data
+            post.body = edit_form.body.data
+            db.session.commit()
+            return redirect(url_for("show_post", post_id=post.id))
+    else:
+        # return render_template("403.html"), 403
+        abort(403)
 
     return render_template("make-post.html", form=edit_form, logged_in=current_user.is_authenticated)
 
 
-@admin_only
 @app.route("/delete/<int:post_id>")
 @login_required
 def delete_post(post_id):
-    post_to_delete = BlogPost.query.get(post_id)
-    db.session.delete(post_to_delete)
-    db.session.commit()
-    return redirect(url_for('get_all_posts'))
+    if BlogPost.query.get(post_id).person_id == current_user.id or current_user.id == 1:
+        post_to_delete = BlogPost.query.get(post_id)
+        db.session.delete(post_to_delete)
+        db.session.commit()
+        return redirect(url_for('get_all_posts'))
+    else:
+        abort(403)
 
 
 if __name__ == "__main__":
