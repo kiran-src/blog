@@ -1,3 +1,4 @@
+{% import "bootstrap/wtf.html" as wtf %}
 {% include "header.html" %}
 
   <!-- Page Header -->
@@ -37,16 +38,18 @@
 
 <!--           Comments Area -->
           <div class="col-lg-8 col-md-10 mx-auto comment">
+            {% if logged_in %}
+            {{ wtf.quick_form(comment, novalidate=True) }}
+            {% endif %}
               <ul class="commentList">
+                {% for i in history %}
                 <li>
-                    <div class="commenterImage">
-                      <img src="https://pbs.twimg.com/profile_images/744849215675838464/IH0FNIXk.jpg"/>
-                    </div>
                     <div class="commentText">
-                      <p>Some comment</p>
-                      <span class="date sub-text">comment author name</span>
+                      <p>{{i.body}}</p>
+                      <span class="date sub-text">{{i.author}} on {{i.date}}</span>
                     </div>
                 </li>
+                {% endfor %}
               </ul>
             </div>
 

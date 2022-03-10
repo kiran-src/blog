@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from forms import CreatePostForm
+from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 from flask_gravatar import Gravatar
 
 app = Flask(__name__)
@@ -18,33 +18,36 @@ app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
 ckeditor = CKEditor(app)
 Bootstrap(app)
 
-##CONNECT TO Blog DB
+# CONNECT TO Blog DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-##LOGIN FUNCTIONALITY
+# LOGIN FUNCTIONALITY
 login_manager = LoginManager()
 login_manager.init_app(app)
+
 
 @login_manager.user_loader
 def load_user(user_id):
     return Users.query.get(user_id)
 
-##CONFIGURE TABLES
+
+# CONFIGURE TABLES
 
 
 class Users(UserMixin, db.Model):
-    # __tablename__ = "users"
+    __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(250), nullable=False)
     password = db.Column(db.String(500), nullable=False)
     name = db.Column(db.String(250), nullable=False)
     posts = db.relationship('BlogPost', backref='users', lazy=True)
+    user_comments = db.relationship('PostComments', backref='users', lazy=True)
 
 
 class BlogPost(db.Model):
-    # __tablename__ = "blog_posts"
+    __tablename__ = "blog_posts"
     id = db.Column(db.Integer, primary_key=True)
     author = db.Column(db.String(250), nullable=False)
     title = db.Column(db.String(250), unique=True, nullable=False)
@@ -53,30 +56,29 @@ class BlogPost(db.Model):
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
     person_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    blog_comments = db.relationship('PostComments', backref='blog_posts', lazy=True)
 
 
-##FORMS
-class RegisterForm(FlaskForm):
-    name = StringField("Name", validators=[DataRequired()])
-    email = EmailField("Email Address", validators=[DataRequired('Valid email address is required')])
-    password = PasswordField("Password", validators=[DataRequired()])
-    submit = SubmitField("Submit")
+class PostComments(db.Model):
+    __tablename__ = "comments"
+    id = db.Column(db.Integer, primary_key=True)
+    author = db.Column(db.String(250), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    date = db.Column(db.String(250), nullable=False)
+    blog_id = db.Column(db.Integer, db.ForeignKey('blog_posts.id'), nullable=False)
+    person_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
 
-class LoginForm(FlaskForm):
-    email = EmailField("Email Address", validators=[DataRequired('Valid email address is required')])
-    password = PasswordField("Password", validators=[DataRequired()])
-    submit = SubmitField("Submit")
-
-
-def admin_only(function, check_id):
+def admin_only(function):
     def wrapper():
 
         if int(current_user.id) == 1:
             function()
         else:
             abort(403)
+
     return wrapper
+
 
 @app.route('/')
 def get_all_posts():
@@ -139,8 +141,24 @@ def logout():
 
 @app.route("/post/<int:post_id>", methods=['POST', 'GET'])
 def show_post(post_id):
+    comment = CommentForm()
+    comment_history = PostComments.query.filter_by(blog_id=post_id)
     requested_post = BlogPost.query.get(post_id)
-    return render_template("post.html", post=requested_post, logged_in=current_user.is_authenticated)
+    if comment.validate_on_submit():
+        if not current_user.is_authenticated:
+            abort(404)
+        new_comment = PostComments(
+            author=current_user.name,
+            body=comment.body.data,
+            date=date.today().strftime("%B %d, %Y"),
+            blog_id=post_id,
+            person_id=current_user.id
+        )
+        db.session.add(new_comment)
+        db.session.commit()
+        return redirect(url_for("show_post", post_id=post_id))
+
+    return render_template("post.html", comment=comment, post=requested_post, history=comment_history, logged_in=current_user.is_authenticated)
 
 
 @app.route("/about")
@@ -176,17 +194,16 @@ def add_new_post():
 @app.route("/edit-post/<int:post_id>", methods=['POST', 'GET'])
 @login_required
 def edit_post(post_id):
-
     post = BlogPost.query.get(post_id)
+    edit_form = CreatePostForm(
+        title=post.title,
+        subtitle=post.subtitle,
+        img_url=post.img_url,
+        author=current_user.name,
+        body=post.body,
+        person_id=current_user.id
+    )
     if post.person_id == current_user.id or current_user.id == 1:
-        edit_form = CreatePostForm(
-            title=post.title,
-            subtitle=post.subtitle,
-            img_url=post.img_url,
-            author=current_user.name,
-            body=post.body,
-            person_id=current_user.id
-        )
         if edit_form.validate_on_submit():
             post.title = edit_form.title.data
             post.subtitle = edit_form.subtitle.data
